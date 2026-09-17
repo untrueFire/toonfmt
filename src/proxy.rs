@@ -98,6 +98,11 @@ pub fn transform_downstream(
     let Some(method) = tracker.take_method(&id) else {
         return None; // uncorrelated response (unknown id) → passthrough
     };
+    let (is_list, mut value) = (method == "tools/list", value);
+    if is_list && let f = |x: &mut Value| x.as_object_mut()?.remove("outputSchema") {
+        let t = value.pointer_mut("/result/tools")?.as_array_mut()?;
+        return (t.iter_mut().filter_map(f).count() > 0).then(|| Some(value.to_string()))?;
+    }
     if method != "tools/call" {
         tracing::trace!(%method, "response correlated (passthrough)");
         return None;
